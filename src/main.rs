@@ -8,21 +8,24 @@ use std::collections::HashMap;
 
 use rocket::response::content::Json;
 
+// Note: rocket_contrib::templates::Template version 2018 not rocket_contrib::Template
 use rocket_contrib::templates::Template;
+use rocket_contrib::serve::StaticFiles;
 
-
+// ref:
+// https://medium.com/@james_32022/rocket-frontend-templates-and-static-assets-5b6d04243a08
 #[get("/template")]
+ fn template() -> Template {
+    let context: HashMap<&str, &str> = [("name", "Jonathan"),("attemptTimes","first")]
+        .iter().cloned().collect();
+    Template::render("index", &context)
+}
 /* fn template() -> Template {
     //let context = context();
     let mut context =  HashMap::new();
     Template::render("index", &context);
     
  }  */
- fn tplate() -> Template {
-    let context: HashMap<&str, &str> = [("name", "Jonathan"),("attemptTimes","first")]
-        .iter().cloned().collect();
-    Template::render("index", &context)
-}
 
  #[get("/jackson")]
 fn jackson() -> Json<&'static str> {
@@ -71,7 +74,9 @@ fn update(db: &Db, id: Id, msg: Json<Message>) -> JsonValue {
 fn main() {
     // println!("Hello, world!");
     //rocket::ignite().attach(Template::fairing());
-    rocket::ignite().mount("/",routes![index, jackson, wave, tplate, branch::world])
+    rocket::ignite()
+    .mount("/static", StaticFiles::from("static"))
+    .mount("/",routes![index, jackson, wave, template, branch::world])
     .attach(Template::fairing())
     .launch();
 }

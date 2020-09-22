@@ -1,17 +1,73 @@
 
 #![feature(proc_macro_hygiene, decl_macro)]
+#![feature(plugin)]
+//#![plugin(rocket_codegen)]
 
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate rocket_contrib;
 #[macro_use] extern crate serde_derive;
+#[macro_use] extern crate diesel;
 
 use std::sync::Mutex;
 use std::collections::HashMap;
+
+// marvel db - hero
+// https://github.com/sean3z/rocket-diesel-rest-api-example/blob/master/src/main.rs
+// export DATABASE_URL=mysql://user:pass@localhost/marvel
+// curl url -X POST -d '{"name":"alpha","identity":"maskman","hometown":"singapore","age":"89"}' 'Content-Type: application/json' http://localhost:8000/hero/
+//
+// problem and solution 1:
+// /usr/bin/ld: cannot find -lmysqlclient Error but I have installed libmysqlclient-dev
+// sudo apt-get install libmysqlclient-dev
+mod db;
+mod schema;
+
+mod hero;
+use hero::Hero;
+
+#[post("/", data = "<hero>")]
+fn create(hero: Json<Hero>, connection: db::Connection) -> Json<Hero> {
+    let insert = Hero { id: None, ..hero.into_inner() };
+    Json(Hero::create(insert, &connection))
+}
+
+#[get("/")]
+fn read(connection: db::Connection) -> JsonValue {
+//fn read(connection: db::Connection) -> Json<Value> {
+//    Json(json!(Hero::read(&connection)))
+    json!(Hero::read(&connection))
+}
+
+#[put("/<id>", data = "<hero>")]
+fn update(id: i32, hero: Json<Hero>, connection: db::Connection) -> JsonValue {
+//fn update(id: i32, hero: Json<Hero>, connection: db::Connection) -> Json<Value> {
+    let update = Hero { id: Some(id), ..hero.into_inner() };
+    json!({
+        "success": Hero::update(id, update, &connection)
+    })
+/*     Json(json!({
+        "success": Hero::update(id, update, &connection)
+    })) */
+}
+
+#[delete("/<id>")]
+fn delete(id: i32, connection: db::Connection) -> JsonValue {
+    json!({
+        "success": Hero::delete(id, &connection)
+    })
+}
+/* fn delete(id: i32, connection: db::Connection) -> Json<Value> {
+    Json(json!({
+        "success": Hero::delete(id, &connection)
+    }))
+} */
+// marvel db - hero
 
 // ref:
 // https://github.com/SergioBenitez/Rocket/blob/v0.4/examples/json/src/main.rs
 //use rocket::response::content::Json;
 use rocket_contrib::json::{Json,JsonValue};
+//use rocket_contrib::{Value};
 use rocket::State;
 
 // Note: rocket_contrib::templates::Template version 2018 not rocket_contrib::Template
@@ -34,7 +90,7 @@ struct Message {
 // TODO: This example can be improved by using `route` with multiple HTTP verbs.
 //$curl -X POST -d '{ "contents": "Hello, world!"}' -H 'Content-Type: application/json' http:/localhost:8000/message/1
 #[post("/<id>", format = "json", data = "<message>")]
-fn new(id: MsgID, message: Json<Message>, map: State<MessageMap>) -> JsonValue {
+fn newJsonMsg(id: MsgID, message: Json<Message>, map: State<MessageMap>) -> JsonValue {
     let mut hashmap = map.lock().expect("map lock.");
     if hashmap.contains_key(&id) {
         json!({
@@ -49,7 +105,7 @@ fn new(id: MsgID, message: Json<Message>, map: State<MessageMap>) -> JsonValue {
 
 // $curl -X PUT -d '{ "contents": "Harlo, wolf!"}' -H 'Content-Type: application/json' http:/localhost:8000/message/1
 #[put("/<id>", format = "json", data = "<message>")]
-fn update(id: MsgID, message: Json<Message>, map: State<MessageMap>) -> Option<JsonValue> {
+fn updateJsonMsg(id: MsgID, message: Json<Message>, map: State<MessageMap>) -> Option<JsonValue> {
     let mut hashmap = map.lock().unwrap();
     if hashmap.contains_key(&id) {
         hashmap.insert(id, message.0.contents);
@@ -61,7 +117,7 @@ fn update(id: MsgID, message: Json<Message>, map: State<MessageMap>) -> Option<J
 
 //$curl http://localhost:8000/message/1
 #[get("/<id>", format = "json")]
-fn get(id: MsgID, map: State<MessageMap>) -> Option<Json<Message>> {
+fn getJsonMsg(id: MsgID, map: State<MessageMap>) -> Option<Json<Message>> {
     let hashmap = map.lock().unwrap();
     hashmap.get(&id).map(|contents| {
         Json(Message {
@@ -111,7 +167,7 @@ mod branch {
     }
 }
 
-#[get("/")]
+#[get("/hello")]
 fn index<'alifetime>() -> &'alifetime str {
 // fn index() -> &'static str {
     "Hello, world!"
@@ -144,8 +200,13 @@ fn main() {
     rocket::ignite()
     .mount("/static", StaticFiles::from("static"))
     .mount("/",routes![index, jackson, wave, template, branch::world])
+    // marvel db - hero
+    .manage(db::connect())
+    .mount("/hero", routes![create, update, delete])
+    .mount("/heroes", routes![read])
+    // marvel db - hero
     .attach(Template::fairing())
-    .mount("/message", routes![new, update, get])
+    .mount("/message", routes![newJsonMsg, updateJsonMsg, getJsonMsg])
     .register(catchers![not_found])
     .manage(Mutex::new(HashMap::<MsgID, String>::new()))
     .launch();

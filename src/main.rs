@@ -14,7 +14,10 @@ use std::collections::HashMap;
 // marvel db - hero
 // https://github.com/sean3z/rocket-diesel-rest-api-example/blob/master/src/main.rs
 // export DATABASE_URL=mysql://user:pass@localhost/marvel
-// curl url -X POST -d '{"name":"alpha","identity":"maskman","hometown":"singapore","age":"89"}' 'Content-Type: application/json' http://localhost:8000/hero/
+//
+// $ curl -X POST -d '{"name":"alpha","identity":"maskman","hometown":"singapore","age":12}' 'Conent-Type: application/json' http://localhost:8000/hero/
+//
+// http://localhost:8000/heroes
 //
 // problem and solution 1:
 // /usr/bin/ld: cannot find -lmysqlclient Error but I have installed libmysqlclient-dev

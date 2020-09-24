@@ -17,6 +17,8 @@ use std::collections::HashMap;
 //
 // $ curl -X POST -d '{"name":"alpha","identity":"maskman","hometown":"singapore","age":12}' 'Conent-Type: application/json' http://localhost:8000/hero/
 //
+// $ curl -X PUT -d '{"name":"superman","identity":"maskman","hometown":"singapore","age":12}' 'Conent-Type: application/json' http://localhost:8000/hero/1
+//
 // http://localhost:8000/heroes
 //
 // problem and solution 1:

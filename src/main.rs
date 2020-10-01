@@ -140,6 +140,8 @@ fn not_found() -> JsonValue {
     })
 }
 
+//
+// http://localhost:8000/template
 // ref:
 // https://medium.com/@james_32022/rocket-frontend-templates-and-static-assets-5b6d04243a08
 #[get("/template")]
